@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Chat Room</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js"></script>
+    <script>
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDbisbFRreJun2PEwLKTnq9wJ2W1y_SXW0",
+            authDomain: "chatroom-e7581.firebaseapp.com",
+            projectId: "chatroom-e7581",
+            storageBucket: "chatroom-e7581.appspot.com",
+            messagingSenderId: "509703113498",
+            appId: "1:509703113498:web:eb2c71da0ffc6893a53aa3",
+            measurementId: "G-XB9J3RDKM3"
+        };
+
+        // Initialize Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const auth = firebase.getAuth(app);
+        const db = firebase.getFirestore(app);
+
+        // Add event listeners and other logic here
+        document.addEventListener('DOMContentLoaded', function () {
+            document.getElementById('sign-in-btn').addEventListener('click', async () => {
+                const provider = new firebase.GoogleAuthProvider();
+                try {
+                    const result = await firebase.signInWithPopup(auth, provider);
+                    console.log('User signed in:', result.user);
+                } catch (error) {
+                    console.error('Error signing in:', error);
+                }
+            });
+
+            document.getElementById('sign-out-btn').addEventListener('click', async () => {
+                try {
+                    await firebase.signOut(auth);
+                    console.log('User signed out');
+                } catch (error) {
+                    console.error('Error signing out:', error);
+                }
+            });
+
+            document.getElementById('send-btn').addEventListener('click', async () => {
+                const messageText = document.getElementById('message-input').value;
+                if (messageText) {
+                    try {
+                        await firebase.addDoc(firebase.collection(db, 'messages'), {
+                            text: messageText,
+                            user: auth.currentUser.email,
+                            timestamp: firebase.serverTimestamp()
+                        });
+                        document.getElementById('message-input').value = '';
+                    } catch (error) {
+                        console.error('Error sending message:', error);
+                    }
+                }
+            });
+
+            // Real-time message updates
+            firebase.onSnapshot(firebase.collection(db, 'messages'), (snapshot) => {
+                const messagesContainer = document.getElementById('messages-container');
+                messagesContainer.innerHTML = '';
+                snapshot.forEach((doc) => {
+                    const message = doc.data();
+                    const messageElement = document.createElement('div');
+                    messageElement.textContent = `${message.user}: ${message.text}`;
+                    messagesContainer.appendChild(messageElement);
+                });
+            });
+        });
+    </script>
+</head>
+<body>
+    <button id="sign-in-btn">Sign In</button>
+    <button id="sign-out-btn">Sign Out</button>
+    <input id="message-input" type="text" placeholder="Type a message">
+    <button id="send-btn">Send</button>
+    <div id="messages-container"></div>
+</body>
+</html>
