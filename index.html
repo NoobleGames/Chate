@@ -8,6 +8,62 @@
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js"></script>
+    <style>
+        /* Embedded CSS for styling */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        #auth-container, #chat-container {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            width: 300px;
+            text-align: center;
+        }
+
+        button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        #message-input {
+            width: calc(100% - 20px);
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            margin-top: 10px;
+        }
+
+        #messages-container {
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            text-align: left;
+        }
+
+        .message {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+    </style>
     <script>
         // Your web app's Firebase configuration
         const firebaseConfig = {
@@ -25,29 +81,61 @@
         const auth = firebase.getAuth(app);
         const db = firebase.getFirestore(app);
 
-        // Add event listeners and other logic here
         document.addEventListener('DOMContentLoaded', function () {
-            document.getElementById('sign-in-btn').addEventListener('click', async () => {
+            const signInBtn = document.getElementById('sign-in-btn');
+            const signOutBtn = document.getElementById('sign-out-btn');
+            const chatContainer = document.getElementById('chat-container');
+            const messageInput = document.getElementById('message-input');
+            const sendBtn = document.getElementById('send-btn');
+            const messagesContainer = document.getElementById('messages-container');
+
+            function handleUserState(user) {
+                if (user) {
+                    // User is signed in
+                    chatContainer.style.display = 'block';
+                    signInBtn.style.display = 'none';
+                    signOutBtn.style.display = 'inline';
+                    fetchMessages();
+                } else {
+                    // User is signed out
+                    chatContainer.style.display = 'none';
+                    signInBtn.style.display = 'inline';
+                    signOutBtn.style.display = 'none';
+                }
+            }
+
+            async function fetchMessages() {
+                firebase.onSnapshot(firebase.collection(db, 'messages'), (snapshot) => {
+                    messagesContainer.innerHTML = '';
+                    snapshot.forEach((doc) => {
+                        const message = doc.data();
+                        const messageElement = document.createElement('div');
+                        messageElement.className = 'message';
+                        messageElement.textContent = `${message.user}: ${message.text}`;
+                        messagesContainer.appendChild(messageElement);
+                    });
+                });
+            }
+
+            signInBtn.addEventListener('click', async () => {
                 const provider = new firebase.GoogleAuthProvider();
                 try {
-                    const result = await firebase.signInWithPopup(auth, provider);
-                    console.log('User signed in:', result.user);
+                    await firebase.signInWithPopup(auth, provider);
                 } catch (error) {
                     console.error('Error signing in:', error);
                 }
             });
 
-            document.getElementById('sign-out-btn').addEventListener('click', async () => {
+            signOutBtn.addEventListener('click', async () => {
                 try {
                     await firebase.signOut(auth);
-                    console.log('User signed out');
                 } catch (error) {
                     console.error('Error signing out:', error);
                 }
             });
 
-            document.getElementById('send-btn').addEventListener('click', async () => {
-                const messageText = document.getElementById('message-input').value;
+            sendBtn.addEventListener('click', async () => {
+                const messageText = messageInput.value;
                 if (messageText) {
                     try {
                         await firebase.addDoc(firebase.collection(db, 'messages'), {
@@ -55,32 +143,26 @@
                             user: auth.currentUser.email,
                             timestamp: firebase.serverTimestamp()
                         });
-                        document.getElementById('message-input').value = '';
+                        messageInput.value = '';
                     } catch (error) {
                         console.error('Error sending message:', error);
                     }
                 }
             });
 
-            // Real-time message updates
-            firebase.onSnapshot(firebase.collection(db, 'messages'), (snapshot) => {
-                const messagesContainer = document.getElementById('messages-container');
-                messagesContainer.innerHTML = '';
-                snapshot.forEach((doc) => {
-                    const message = doc.data();
-                    const messageElement = document.createElement('div');
-                    messageElement.textContent = `${message.user}: ${message.text}`;
-                    messagesContainer.appendChild(messageElement);
-                });
-            });
+            firebase.onAuthStateChanged(auth, handleUserState);
         });
     </script>
 </head>
 <body>
-    <button id="sign-in-btn">Sign In</button>
-    <button id="sign-out-btn">Sign Out</button>
-    <input id="message-input" type="text" placeholder="Type a message">
-    <button id="send-btn">Send</button>
-    <div id="messages-container"></div>
+    <div id="auth-container">
+        <button id="sign-in-btn">Sign In with Google</button>
+        <button id="sign-out-btn" style="display: none;">Sign Out</button>
+    </div>
+    <div id="chat-container" style="display: none;">
+        <input id="message-input" type="text" placeholder="Type a message">
+        <button id="send-btn">Send</button>
+        <div id="messages-container"></div>
+    </div>
 </body>
 </html>
