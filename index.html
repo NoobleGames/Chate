@@ -120,7 +120,8 @@
             signInBtn.addEventListener('click', async () => {
                 const provider = new firebase.GoogleAuthProvider();
                 try {
-                    await firebase.signInWithPopup(auth, provider);
+                    const result = await firebase.signInWithPopup(auth, provider);
+                    console.log('User signed in:', result.user);
                 } catch (error) {
                     console.error('Error signing in:', error);
                 }
@@ -129,6 +130,7 @@
             signOutBtn.addEventListener('click', async () => {
                 try {
                     await firebase.signOut(auth);
+                    console.log('User signed out');
                 } catch (error) {
                     console.error('Error signing out:', error);
                 }
@@ -166,3 +168,4 @@
     </div>
 </body>
 </html>
+
